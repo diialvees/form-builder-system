@@ -1,0 +1,17 @@
+# Pastas de dependências
+node_modules
+
+# Build artifacts (arquivos gerados)
+dist
+build
+out
+coverage
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# Logs do npm e yarn
+npm-debug.log*
+yarn-error.log*
+
