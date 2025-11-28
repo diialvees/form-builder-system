@@ -59,19 +59,20 @@ const FormRenderer = ({ formId }) => {
     });
   };
 
-  // 3. Envia as respostas para o Backend
+  // 3. Envia as respostas para o Backend (CORRIGIDO)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Estrutura do payload para o backend
+    // CORREÇÃO: Estrutura do payload ajustada para o backend
+    // Mudança: A chave agora é 'data' e removemos o formId do corpo
     const payload = {
-      formId: form.id, 
-      answers: formData 
+      data: formData 
     };
 
     try {
-      const response = await fetch(`http://localhost:8080/api/responses`, {
+      // CORREÇÃO: Incluído o ID do formulário na URL
+      const response = await fetch(`http://localhost:8080/api/responses/${form.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
