@@ -2,9 +2,25 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// Rota GET para LISTAR TODOS os formulários (Dashboard)
+// Rota Estática: /api/forms
+router.get('/', async (req, res) => {
+  try {
+    // Seleciona campos essenciais para a listagem
+    const sql = 'SELECT id, title, submission_date FROM forms ORDER BY submission_date DESC';
+    
+    const result = await db.query(sql);
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Erro ao listar formulários:', error);
+    res.status(500).json({ error: 'Erro interno ao listar formulários.' });
+  }
+});
+
+
 // Rota POST para criar um novo formulário
 router.post('/', async (req, res) => {
-  // 1. Extraímos 'theme' do corpo da requisição junto com os outros dados
   const { title, description, fields: rawFields, theme } = req.body;
 
   if (!title || !rawFields) {
@@ -13,8 +29,6 @@ router.post('/', async (req, res) => {
 
   let sanitizedFields;
   try {
-    // Tenta garantir que rawFields é um objeto e depois serializa para string JSON segura
-    // Isso é necessário para o CAST($3 AS JSONB) funcionar perfeitamente com qualquer driver
     let fieldsObject = typeof rawFields === 'string' ? JSON.parse(rawFields) : rawFields;
     sanitizedFields = JSON.stringify(fieldsObject);
   } catch (e) {
@@ -22,15 +36,9 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Formato da estrutura de campos (fields) inválido.' });
   }
 
-  // 2. Preparamos o tema. Se não vier tema (undefined/null), usamos um objeto padrão.
-  // O driver 'pg' geralmente lida bem com objetos JS passados para colunas JSONB, 
-  // então não precisamos necessariamente de JSON.stringify aqui se não usarmos CAST explícito.
   const sanitizedTheme = theme ? theme : { primaryColor: '#4f46e5', backgroundColor: '#ffffff' };
 
   try {
-    // 3. SQL Atualizado: Incluímos a coluna 'theme' e o placeholder $4.
-    // Note que para 'fields' usamos CAST($3 AS JSONB) porque estamos enviando uma string JSON.
-    // Para 'theme' ($4), estamos enviando o objeto direto, o driver converte.
     const sql = 'INSERT INTO forms (title, description, fields, theme) VALUES ($1, $2, CAST($3 AS JSONB), $4) RETURNING id';
     
     const params = [title, description, sanitizedFields, sanitizedTheme];
@@ -47,13 +55,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Rota GET para recuperar a estrutura de um formulário específico
+
+// Rota GET para BUSCAR POR ID (DINÂMICA: /api/forms/:id)
+// Esta rota deve vir DEPOIS da rota '/' de listagem
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 4. SQL Atualizado: Adicionado 'theme' na seleção
-    const sql = 'SELECT id, title, description, fields, theme FROM forms WHERE id = $1';
+    // Adicionado 'theme' na seleção
+    const sql = 'SELECT id, title, description, fields, theme FROM forms WHERE id = $1'; 
     const params = [id];
 
     const result = await db.query(sql, params);
@@ -62,8 +72,6 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Formulário não encontrado.' });
     }
 
-    // O PostgreSQL e o driver 'pg' convertem automaticamente colunas JSONB 
-    // de volta para objetos JavaScript, então 'fields' e 'theme' já virão como objetos prontos para uso.
     res.status(200).json(result.rows[0]);
 
   } catch (error) {
@@ -71,5 +79,68 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor ao buscar o formulário.' });
   }
 });
+
+
+// Rota PUT para atualizar um formulário existente
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, description, fields: rawFields, theme } = req.body;
+
+  if (!title || !rawFields) {
+    return res.status(400).json({ error: 'Título e a estrutura de campos (fields) são obrigatórios.' });
+  }
+
+  let sanitizedFields;
+  try {
+    let fieldsObject = typeof rawFields === 'string' ? JSON.parse(rawFields) : rawFields;
+    sanitizedFields = JSON.stringify(fieldsObject);
+  } catch (e) {
+    return res.status(400).json({ error: 'Formato da estrutura de campos (fields) inválido.' });
+  }
+
+  try {
+    const sql = `
+      UPDATE forms
+      SET title = $1, description = $2, fields = CAST($3 AS JSONB), theme = $4, submission_date = NOW()
+      WHERE id = $5
+      RETURNING id;
+    `;
+    const params = [title, description, sanitizedFields, theme, id];
+
+    const result = await db.query(sql, params);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Formulário não encontrado para atualização.' });
+    }
+
+    res.status(200).json({ message: 'Formulário atualizado com sucesso.', formId: result.rows[0].id });
+  } catch (error) {
+    console.error('Erro ao atualizar formulário:', error);
+    res.status(500).json({ error: 'Erro interno ao atualizar formulário.' });
+  }
+});
+
+
+// Rota DELETE para excluir um formulário pelo ID
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const sql = 'DELETE FROM forms WHERE id = $1 RETURNING id';
+    const params = [id];
+
+    const result = await db.query(sql, params);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Formulário não encontrado para exclusão.' });
+    }
+
+    res.status(200).json({ message: 'Formulário e respostas excluídos com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir formulário:', error);
+    res.status(500).json({ error: 'Erro interno ao excluir formulário.' });
+  }
+});
+
 
 module.exports = router;
