@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 
-const FormRenderer = ({ formId }) => {
+const FormRenderer = () => {
+  const { formId } = useParams();
   const [form, setForm] = useState(null);
   const [formData, setFormData] = useState({}); // Armazena as respostas: { campoId: 'valor' }
   const [isLoading, setIsLoading] = useState(true);
@@ -59,30 +61,40 @@ const FormRenderer = ({ formId }) => {
     });
   };
 
-  // 3. Envia as respostas para o Backend (CORRIGIDO)
+  // 3. Envia as respostas para o Backend (ATUALIZADO COM DEBUG)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // CORREÇÃO: Estrutura do payload ajustada para o backend
-    // Mudança: A chave agora é 'data' e removemos o formId do corpo
+    // LOG DE DEBUG 1: Verifique se o ID existe
+    console.log("Tentando enviar para o Form ID:", form.id);
+
+    // Estrutura do payload OBRIGATÓRIA para o seu backend: { data: ... }
     const payload = {
       data: formData 
     };
 
     try {
-      // CORREÇÃO: Incluído o ID do formulário na URL
-      const response = await fetch(`http://localhost:8080/api/responses/${form.id}`, {
+      // LOG DE DEBUG 2: Verifique a URL exata
+      const url = `http://localhost:8080/api/responses/${form.id}`;
+      console.log("URL de envio:", url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error("Erro ao enviar respostas.");
+      if (!response.ok) {
+        // Se der erro, vamos ler o que o servidor respondeu
+        const errorText = await response.text();
+        throw new Error(`Erro do servidor (${response.status}): ${errorText}`);
+      }
 
       setSubmitted(true);
-      console.log("Enviado com sucesso:", payload);
+      console.log("Enviado com sucesso!");
     } catch (err) {
+      console.error("Erro detalhado:", err);
       alert("Erro ao enviar: " + err.message);
     } finally {
       setIsSubmitting(false);
