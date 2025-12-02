@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif; /* Aplica a nova fonte */
+  background-color: #f8fafc; /* Um cinza mais moderno e suave para o fundo */
+}

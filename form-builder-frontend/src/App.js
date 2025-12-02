@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Dashboard from './pages/Dashboard';
 import FormBuilder from './components/FormBuilder';
 import FormRenderer from './components/FormRenderer';
+import Settings from './pages/Settings';
 import './index.css';
 
 function App() {
@@ -11,6 +12,8 @@ function App() {
       <Routes>
         {/* Rota 1: Dashboard (Página Inicial) */}
         <Route path="/" element={<Dashboard />} />
+
+        <Route path="/settings" element={<Settings />} />
         
         {/* Rota 2: FormBuilder (Construtor/Edição) */}
         {/* 'id' pode ser 'new' para novo ou o ID numérico para editar */}

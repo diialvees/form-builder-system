@@ -40,7 +40,7 @@ const FormActions = ({ formId, onDeleted }) => {
         onClick={handleDownloadResponses}
         className="text-blue-600 hover:text-blue-800 font-medium"
       >
-        ⬇️ Exportar CSV
+        ⬇️ Baixar Respostas
       </button>
       
       {/* Link para Edição */}

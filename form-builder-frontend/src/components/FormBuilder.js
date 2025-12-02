@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useHistory } from "../hooks/useHistory";
 import ThemePanel from "./ThemePanel";
 
-// Lista de campos disponíveis
+// 1. ADICIONADO TIPO 'CPF' NA LISTA
 const FIELD_TYPES = [
-  { type: "text", label: "Campo de Texto", icon: "🔤" },
+  { type: "text", label: "Texto Curto", icon: "🔤" },
   { type: "textarea", label: "Texto Longo", icon: "📝" },
+  { type: "email", label: "E-mail", icon: "📧" },
+  { type: "tel", label: "Telefone", icon: "📱" },
+  { type: "cpf", label: "CPF", icon: "🆔" }, // <--- NOVO
+  { type: "date", label: "Data", icon: "📅" },
+  { type: "number", label: "Número", icon: "🔢" },
   { type: "checkbox", label: "Múltipla Escolha", icon: "☑️" },
   { type: "radio", label: "Escolha Única", icon: "🔘" },
 ];
 
 const INITIAL_FIELDS = [];
 
-// Utilidade para reorder no drag
 const reorder = (list, startIndex, endIndex) => {
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
@@ -57,13 +61,15 @@ const FieldComponent = ({
     ]);
   };
 
+  // 2. INCLUÍDO 'cpf' NA LISTA DE INPUTS SIMPLES
+  const isSimpleInput = ["text", "email", "date", "number", "tel", "cpf"].includes(field.type);
+
   return (
     <div
       className={`p-4 border rounded-lg bg-white shadow-sm transition flex items-start relative
       ${isEditing ? "border-indigo-500 shadow-lg ring-1 ring-indigo-500" : "hover:shadow-md"}
       ${isDragging ? "bg-indigo-50 border-indigo-500 shadow-xl ring-2 ring-indigo-200 z-50" : ""}`}
     >
-      {/* HANDLE */}
       <div
         {...dragHandleProps}
         className="mt-1 mr-3 p-2 rounded hover:bg-gray-100 text-gray-400 cursor-grab active:cursor-grabbing select-none"
@@ -73,10 +79,7 @@ const FieldComponent = ({
         </svg>
       </div>
 
-      {/* CONTEÚDO */}
       <div className="flex-grow cursor-pointer" onClick={() => !isEditing && setIsEditing(true)}>
-        
-        {/* Cabeçalho */}
         <div className="flex justify-between items-start mb-3">
           {isEditing ? (
             <input
@@ -110,14 +113,22 @@ const FieldComponent = ({
           )}
         </div>
 
-        {/* Preview */}
-        <div className="space-y-3 pointer-events-none">
-          {(field.type === "text" || field.type === "textarea") &&
-            (field.type === "text" ? (
-              <input disabled className="w-full p-2 border rounded bg-gray-50" placeholder="Resposta curta..." />
-            ) : (
+        <div className="space-y-3 pointer-events-none opacity-60">
+          {isSimpleInput && (
+             <div className="relative">
+                <input 
+                  disabled 
+                  type={field.type === 'cpf' ? 'text' : field.type} 
+                  className="w-full p-2 border rounded bg-gray-50 text-gray-400" 
+                  placeholder={field.placeholder || `Resposta (${field.type})...`} 
+                />
+                {field.type === 'date' && <span className="absolute right-3 top-2">📅</span>}
+             </div>
+          )}
+
+          {field.type === "textarea" && (
               <textarea disabled rows="3" className="w-full p-2 border rounded bg-gray-50" placeholder="Resposta longa..." />
-            ))}
+          )}
 
           {(field.type === "checkbox" || field.type === "radio") && (
             <div className="space-y-2">
@@ -135,28 +146,26 @@ const FieldComponent = ({
           )}
         </div>
 
-        {/* Painel de edição */}
         {isEditing && (
           <div
             className="mt-6 pt-4 border-t border-indigo-100 cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Texto */}
-            {(field.type === "text" || field.type === "textarea") && (
+            {(isSimpleInput || field.type === "textarea") && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Texto de Ajuda
+                  Texto de Ajuda (Placeholder)
                 </label>
                 <input
                   type="text"
                   value={field.placeholder || ""}
                   onChange={(e) => onUpdate(field.id, "placeholder", e.target.value)}
-                  className="w-full text-sm border p-2 rounded"
+                  className="w-full text-sm border p-2 rounded focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Ex: Digite aqui..."
                 />
               </div>
             )}
 
-            {/* Opções */}
             {(field.type === "checkbox" || field.type === "radio") && (
               <div className="mb-4 bg-gray-50 p-3 rounded border">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -174,27 +183,27 @@ const FieldComponent = ({
                       type="text"
                       value={option.value}
                       onChange={(e) => handleUpdateOption(option.id, e.target.value)}
-                      className="flex-grow text-sm border p-1 rounded"
+                      className="flex-grow text-sm border p-1 rounded focus:ring-indigo-500"
                     />
-                    <button className="ml-2" onClick={() => handleRemoveOption(option.id)}>
+                    <button className="ml-2 text-red-400 hover:text-red-600" onClick={() => handleRemoveOption(option.id)}>
                       ×
                     </button>
                   </div>
                 ))}
 
-                <button className="text-indigo-600 text-sm" onClick={handleAddOption}>
+                <button className="text-indigo-600 text-sm font-medium hover:text-indigo-800" onClick={handleAddOption}>
                   + Adicionar Opção
                 </button>
               </div>
             )}
 
-            {/* Rodapé */}
-            <div className="flex justify-between items-center mt-4">
-              <label className="text-sm text-gray-600 flex items-center gap-2">
+            <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-100">
+              <label className="text-sm text-gray-600 flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={field.required}
                   onChange={(e) => onUpdate(field.id, "required", e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 Obrigatório
               </label>
@@ -202,13 +211,13 @@ const FieldComponent = ({
               <div className="flex gap-2">
                 <button
                   onClick={() => onRemove(field.id)}
-                  className="px-3 py-1 text-sm text-red-600 rounded"
+                  className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition"
                 >
                   Excluir
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-1 text-sm bg-indigo-600 text-white rounded"
+                  className="px-4 py-1 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded transition shadow-sm"
                 >
                   Concluído
                 </button>
@@ -221,7 +230,7 @@ const FieldComponent = ({
   );
 };
 
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL DO BUILDER
 const FormBuilder = () => {
   const { id } = useParams();
 
@@ -244,17 +253,11 @@ const FormBuilder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedId, setLastSavedId] = useState(null);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
-
   const [isThemePanelOpen, setIsThemePanelOpen] = useState(false);
-
-  // Estados de carregamento
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // ID salvo
   const [savedFormId, setSavedFormId] = useState(id !== "new" ? id : null);
 
-  // Carregar dados do formulário
   useEffect(() => {
     if (id === "new") {
       setTitle("Novo Formulário");
@@ -274,15 +277,12 @@ const FormBuilder = () => {
         if (!res.ok) throw new Error("Formulário não encontrado.");
 
         const data = await res.json();
-
         setTitle(data.title);
         setDescription(data.description);
         setTheme(data.theme);
         setFields(data.fields);
-
         setSavedFormId(data.id);
         setLastSavedId(data.id);
-
       } catch (e) {
         setError(e.message);
       } finally {
@@ -293,7 +293,6 @@ const FormBuilder = () => {
     load();
   }, [id]);
 
-  // Atualizar campo
   const handleUpdateField = (fieldId, key, value) => {
     const updated = fields.map((f) =>
       f.id === fieldId ? { ...f, [key]: value } : f
@@ -301,40 +300,42 @@ const FormBuilder = () => {
     setFields(updated);
   };
 
-  // Remover campo
   const handleRemoveField = (fieldId) => {
     setFields(fields.filter((f) => f.id !== fieldId));
   };
 
-  // Adicionar campo
   const handleAddField = (type) => {
     const base = {
       id: Date.now(),
       type,
-      label: "Pergunta sem título",
+      label: `Novo Campo de ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       required: false,
       placeholder: "",
       options: [],
     };
 
+    // 3. CONFIGURAÇÃO DE PLACEHOLDERS PADRÃO
+    if (type === "email") base.placeholder = "exemplo@email.com";
+    if (type === "tel") base.placeholder = "(00) 00000-0000";
+    if (type === "cpf") base.placeholder = "000.000.000-00"; // <--- NOVO
+    if (type === "date") base.label = "Selecione uma data";
+
     if (type === "checkbox" || type === "radio") {
+      base.label = "Escolha uma opção";
       base.options = [
         { id: Date.now() + 1, value: "Opção 1" },
         { id: Date.now() + 2, value: "Opção 2" },
       ];
     }
-
     setFields([...fields, base]);
   };
 
-  // Drag & Drop
   const onDragEnd = (result) => {
     if (!result.destination) return;
     const items = reorder(fields, result.source.index, result.destination.index);
     setFields(items);
   };
 
-  // Salvar / Atualizar
   const handleSaveForm = async () => {
     const isEditing = savedFormId !== null;
     const method = isEditing ? "PUT" : "POST";
@@ -352,7 +353,6 @@ const FormBuilder = () => {
 
     try {
       setIsSaving(true);
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -371,7 +371,6 @@ const FormBuilder = () => {
         type: "success",
         message: `Formulário ${isEditing ? "atualizado" : "salvo"} com sucesso!`,
       });
-
     } catch (err) {
       setFeedback({ type: "error", message: err.message });
     } finally {
@@ -380,30 +379,24 @@ const FormBuilder = () => {
     }
   };
 
-  // Copiar link
   const handleGenerateLink = () => {
-  if (!savedFormId) {
-    alert("Salve o formulário primeiro para gerar o link.");
-    return;
-  }
-  
-  // CORREÇÃO: Adicione o '/view' para bater com a rota do App.js
-  // Antes estava provavelmente assim: `${window.location.origin}/form/${savedFormId}`
-  const shareUrl = `${window.location.origin}/form/view/${savedFormId}`; 
-  
-  navigator.clipboard.writeText(shareUrl)
-    .then(() => alert(`Link copiado: ${shareUrl}`))
-    .catch(err => alert(`Link: ${shareUrl}`));
-};
-  // LOADING
+    if (!savedFormId) {
+      alert("Salve o formulário primeiro para gerar o link.");
+      return;
+    }
+    const shareUrl = `${window.location.origin}/form/view/${savedFormId}`; 
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => alert(`Link copiado: ${shareUrl}`))
+      .catch(err => alert(`Link: ${shareUrl}`));
+  };
+
   if (isLoading)
     return (
-      <div className="min-h-screen flex items-center justify-center text-indigo-600">
+      <div className="min-h-screen flex items-center justify-center text-indigo-600 animate-pulse">
         Carregando formulário...
       </div>
     );
 
-  // ERRO
   if (error)
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
@@ -411,15 +404,25 @@ const FormBuilder = () => {
       </div>
     );
 
-  // =======================
-  // RENDER COMPLETO DO JSX
-  // =======================
   return (
     <div
       className="min-h-screen p-8 flex justify-center transition-colors duration-500 relative"
       style={{ backgroundColor: theme.backgroundColor }}
     >
-      {/* TOPO */}
+      {/* BOTÃO VOLTAR DASHBOARD */}
+      <div className="absolute top-4 left-4 z-10">
+        <Link 
+            to="/" 
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 transition-all font-medium border border-gray-100"
+            title="Voltar para a lista de formulários"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="hidden sm:inline">Dashboard</span>
+        </Link>
+      </div>
+
       <div className="absolute top-4 right-4 flex gap-2 z-10">
         <button
           onClick={undo}
@@ -427,6 +430,7 @@ const FormBuilder = () => {
           className={`p-2 rounded shadow-sm transition ${
             !canUndo ? "bg-gray-100 text-gray-400" : "bg-white hover:bg-gray-50"
           }`}
+          title="Desfazer"
         >
           ↩️
         </button>
@@ -436,6 +440,7 @@ const FormBuilder = () => {
           className={`p-2 rounded shadow-sm transition ${
             !canRedo ? "bg-gray-100 text-gray-400" : "bg-white hover:bg-gray-50"
           }`}
+          title="Refazer"
         >
           ↪️
         </button>
@@ -447,35 +452,32 @@ const FormBuilder = () => {
         </button>
       </div>
 
-      {/* CONTAINER */}
       <div className="flex-grow max-w-3xl bg-white shadow-xl rounded-lg overflow-hidden flex flex-col border h-fit">
-        {/* CABEÇALHO */}
         <div
           className="p-8 border-b"
           style={{ borderTop: `8px solid ${theme.primaryColor}` }}
         >
           <input
             type="text"
-            className="w-full text-4xl font-bold text-gray-800 border-none focus:ring-0 placeholder-gray-300"
+            className="w-full text-4xl font-bold text-gray-800 border-none focus:ring-0 placeholder-gray-300 bg-transparent"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Título do Formulário"
           />
           <input
-            className="w-full mt-2 text-lg text-gray-500 border-none focus:ring-0 placeholder-gray-300"
+            className="w-full mt-2 text-lg text-gray-500 border-none focus:ring-0 placeholder-gray-300 bg-transparent"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descrição do formulário"
           />
         </div>
 
-        {/* CAMPOS (DND) */}
         <div className="p-8 space-y-6 flex-grow bg-white min-h-[400px]">
           <DragDropContext onDragEnd={onDragEnd}>
             {fields.length === 0 ? (
-              <div className="text-center text-gray-400 mt-10 border-2 border-dashed border-gray-200 rounded-lg p-10">
-                <p className="text-xl">O formulário está vazio.</p>
-                <p className="text-sm">Adicione campos usando o menu lateral.</p>
+              <div className="text-center text-gray-400 mt-10 border-2 border-dashed border-gray-200 rounded-lg p-10 bg-gray-50">
+                <p className="text-xl font-medium">O formulário está vazio.</p>
+                <p className="text-sm mt-2">Adicione campos usando o menu lateral.</p>
               </div>
             ) : (
               <Droppable droppableId="form-fields">
@@ -501,7 +503,6 @@ const FormBuilder = () => {
                         )}
                       </Draggable>
                     ))}
-
                     {provided.placeholder}
                   </div>
                 )}
@@ -510,7 +511,6 @@ const FormBuilder = () => {
           </DragDropContext>
         </div>
 
-        {/* RODAPÉ */}
         <div className="p-6 bg-gray-50 border-t flex justify-between items-center sticky bottom-0 z-10">
           <span
             className={`text-sm font-medium ${
@@ -535,23 +535,21 @@ const FormBuilder = () => {
         </div>
       </div>
 
-      {/* PAINEL ADICIONAR CAMPOS */}
       <div className="ml-8 w-80 flex-shrink-0 space-y-6 hidden lg:block">
         <div className="bg-white p-5 rounded-lg shadow-lg border sticky top-8 space-y-6">
-          <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+          <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider border-b pb-2">
             Adicionar Campos
           </h3>
-
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2">
             {FIELD_TYPES.map((t) => (
               <button
                 key={t.type}
                 onClick={() => handleAddField(t.type)}
                 className="w-full text-left px-4 py-3 bg-white 
                            border rounded hover:bg-gray-50 hover:border-indigo-300
-                           flex items-center gap-3 shadow-sm transition-all"
+                           flex items-center gap-3 shadow-sm transition-all group"
               >
-                <span className="text-xl">{t.icon}</span>
+                <span className="text-xl group-hover:scale-110 transition-transform">{t.icon}</span>
                 <span className="font-medium text-gray-700">{t.label}</span>
               </button>
             ))}
@@ -561,7 +559,7 @@ const FormBuilder = () => {
             <div className="pt-6 border-t space-y-3">
               <button
                 onClick={handleGenerateLink}
-                className="w-full py-3 bg-pink-600 text-white rounded shadow hover:bg-pink-700 font-medium"
+                className="w-full py-3 bg-pink-600 text-white rounded shadow hover:bg-pink-700 font-medium flex justify-center gap-2"
               >
                 🔗 Copiar Link
               </button>
@@ -570,7 +568,7 @@ const FormBuilder = () => {
                 onClick={() =>
                   window.open(`http://localhost:8080/api/responses/${lastSavedId}`, "_blank")
                 }
-                className="w-full py-3 border-2 border-blue-100 text-blue-600 rounded hover:bg-blue-50 font-medium"
+                className="w-full py-3 border-2 border-blue-100 text-blue-600 rounded hover:bg-blue-50 font-medium flex justify-center gap-2"
               >
                 📥 Baixar CSV
               </button>
@@ -579,7 +577,6 @@ const FormBuilder = () => {
         </div>
       </div>
 
-      {/* PAINEL DE TEMA */}
       <div
         className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50
                     p-6 transition-transform duration-300 ease-in-out
